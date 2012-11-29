@@ -133,8 +133,3 @@ class MC(object):
 
 	def setSashPos(self, sashPos=0):
 		self.sashPos=sashPos
-
-class UI(object):
-	"""docstring for conf.UI"""
-	def __init__(self):
-		pass
