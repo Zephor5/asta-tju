@@ -2,7 +2,7 @@
 import os,cPickle as P
 from os import sep as PS
 
-_Title = 'PicManager'
+_Title = 'ASTA_tju'
 _Version='1.0'
 _Author='Zephor'
 
