@@ -37,14 +37,27 @@ def frameFadeOut(frame):
 	#per=int(round(sumt/256))
 	#per=round(per/1000,3)
 	#print per,'per'
-	for i in xrange(0,255):
+	"""for i in xrange(0,255):
 		frame.SetTransparent(255-i)
 		#if i != 255:
 			##print T.clock()-startT,'40'
 		T.sleep(0.001)
 			##print T.clock()-startT,'42'
 	#print T.clock()-startT,'43'
-	frame.Destroy()
+	frame.Destroy()"""
+	def OnTimer(e):
+		if frame._timern < 236:
+			frame._timern+=20
+			#print frame._timern
+			frame.SetTransparent(255-frame._timern)
+		else:
+			frame._timer.Stop()
+			del frame._timer
+			frame.Destroy()
+	frame._timer=wx.Timer(frame, -1)
+	frame._timern=0
+	frame.Bind(wx.EVT_TIMER, OnTimer, frame._timer)
+	frame._timer.Start(30)
 
 class MySplashFrame(AdvancedSplash):
 	"""docstring for MySplashFrame"""
@@ -54,7 +67,9 @@ class MySplashFrame(AdvancedSplash):
 		self.Bind(wx.EVT_CLOSE, self.OnClose)
 
 	def OnClose(self, e=None):
-		self._splashtimer.Stop()
+		self.Enable(False)
+		if hasattr(self, '_splashtimer'):
+			self._splashtimer.Stop()
 		if hasattr(self.app, 'mFrame'):
 			del self._splashtimer
 			self.app.mFrame.Show()
@@ -229,7 +244,7 @@ class ImContainer(wx.Window):
 
 	def OnPaint(self, e):
 		#print 'paint',self.GetLabel(),self.GetPosition()
-		dc = wx.BufferedPaintDC(self, self.buffer)
+		wx.BufferedPaintDC(self, self.buffer)
 
 	def OnSize(self, e):
 		self.reInitBuffer = 1
@@ -385,8 +400,8 @@ class MyImWindow(wx.Panel):
 	def initScrollBar(self):			#暂时没用
 		sb=self.scrollBar
 		#print self.size
-		sb.SetPosition((self.size.x-_ScrollBarWidth,0))
-		sb.SetSize((_ScrollBarWidth, self.size.y))
+		sb.SetPosition(0)
+		#sb.SetSize(wx.Size(_ScrollBarWidth, self.size.y))
 
 	def onPaint(self, e):		#暂时没用
 		#print 'paint'
@@ -470,7 +485,7 @@ class MainWindow(wx.SplitterWindow):
 
 	def onPaint(self, e):
 		#print 'test'
-		dc = wx.PaintDC(self)
+		wx.PaintDC(self)
 		#self.PrepareDC(dc)
 		#self.DrawShapes(dc)
 		#e.Skip()
@@ -569,7 +584,10 @@ class MainWindow(wx.SplitterWindow):
 						self.AddTreeNodes(parentItem, item)
 
 	def formFolderList(self, path=''):
-		l=os.listdir(path)
+		"""
+		给定路径，以配置里图片文件后缀list为依据，过滤并形成对应特定文件及文件夹list，方便后面使用
+		"""
+		#lis=os.listdir(path)
 		tr=os.walk(path)
 		data=[]
 		imtype=mainC.imTypes
@@ -609,7 +627,7 @@ class MainWindow(wx.SplitterWindow):
 						posStr='Lindex('+posStr+',pos['+str(j)+'])'
 						try:
 							indexs.append(eval(posStr))
-						except Exception, e:
+						except Exception:
 							raise Exception('filelist error')
 				posStr='data[1]'
 				for n,p in enumerate(indexs):
@@ -621,7 +639,7 @@ class MainWindow(wx.SplitterWindow):
 				x[0]=pos[-1]
 				try:
 					exec posStr in globals(),locals()
-				except Exception, e:
+				except Exception:
 					raise Exception('filelist error')
 		if not data:
 			old=mainC.listFolder[:]
@@ -631,6 +649,9 @@ class MainWindow(wx.SplitterWindow):
 			return data
 
 	def GetItemByText(self, text=''):
+		"""
+		通过list的字符串，查找对应的item对象
+		"""
 		fl=self.folderList
 		if text:
 			child,cookie=fl.GetFirstChild(fl.GetRootItem())
@@ -643,6 +664,9 @@ class MainWindow(wx.SplitterWindow):
 		return None
 
 	def ItemGetListPaths(self, item):
+		"""
+		通过选中的item对象，若选中文件夹，返回该文件夹下所有文件（不包括子目录）；若选中的是文件，则返回该文件所在目录的所有文件的绝对路径（不包括子目录）
+		"""
 		fl=self.folderList
 		paths=[]
 		if os.path.isfile(self.ItemGetPath(item)):
@@ -656,6 +680,9 @@ class MainWindow(wx.SplitterWindow):
 		return paths
 
 	def ItemGetPath(self, item):
+		"""
+		通过item对象返回该对象对应的绝对路径，若计算结果不是系统文件夹或文件路径则返回空字符
+		"""
 		path=''
 		fl=self.folderList
 		path=fl.GetItemText(item)
@@ -663,7 +690,10 @@ class MainWindow(wx.SplitterWindow):
 		while fl.GetItemParent(curItem) != fl.GetRootItem():
 			curItem=fl.GetItemParent(curItem)
 			path=fl.GetItemText(curItem)+PS+path
-		return path
+		if os.path.isdir(path) or os.path.isfile(path):
+			return path
+		else:
+			return ''
 
 	def DelListFolder(self, e):
 		fl=self.folderList
@@ -672,7 +702,7 @@ class MainWindow(wx.SplitterWindow):
 		self.initFolderList(old)
 
 	def OnSelChanged(self, e=None):
-		fl=self.folderList
+		#fl=self.folderList
 		item=e.GetItem()
 		try:
 			pre=self.preItem
@@ -692,16 +722,14 @@ class MainWindow(wx.SplitterWindow):
 		pass
 
 	def OnToggleFL(self, e=None):
-		if self.sashPos<10:
-			try:
-				sp=self.resSashPos
-			except Exception, e:
-				sp=int(round(self.GetParent().GetClientSize().x*0.27))
+		if self.sashPos<10 and not hasattr(self, 'resSashPos'):
+			self.resSashPos=int(round(self.GetParent().GetClientSize().x*0.27))
 		else:
-			self.resSashPos=sp=self.sashPos
+			if self.sashPos>10:
+				self.resSashPos=self.sashPos
 		#fl=self.folderList
 		self.ig_prevent_size()
-		if self.GetSashPosition()>9:
+		"""if self.GetSashPosition()>9:
 			self.SetMinimumPaneSize(0)
 			t=int(round(500/sp))
 			if t<1:
@@ -717,6 +745,7 @@ class MainWindow(wx.SplitterWindow):
 			#self.Refresh()
 			#self.Initialize(self.imageGlimpse)
 			self.SetSashSize(0)
+
 		else:
 			#self.SplitVertically(fl, self.imageGlimpse, 1)
 			#fl.Show()
@@ -727,15 +756,51 @@ class MainWindow(wx.SplitterWindow):
 				self.imageGlimpse.Update()
 				if x!=sp:
 					T.sleep(t/1000)
-			self.SetMinimumPaneSize(100)
-		#self.imageGlimpse.Update()
-		self.sashPos=self.GetSashPosition()
-		#print self.sashPos
-		if self.sashPos<10 and hasattr(self,'resSashPos'):
-			mainC.setSashPos(-self.resSashPos)
+			self.SetMinimumPaneSize(100)"""
+		def _toggleSash(e):
+			_sashPos=self.GetSashPosition()
+			#print self.resSashPos
+			if self._toggleStatus:
+				if _sashPos < self.resSashPos-1:
+					self.SetSashPosition(_sashPos+2)
+					self.imageGlimpse.Update()
+				else:
+					if _sashPos != self.resSashPos:
+						_sashPos=self.resSashPos
+						self.SetSashPosition(_sashPos)
+						self.imageGlimpse.Update()
+					self.SetMinimumPaneSize(100)
+			else:
+				if _sashPos > 2:
+					self.SetSashPosition(_sashPos-2)
+					self.imageGlimpse.Update()
+				else:
+					if _sashPos != 1:
+						_sashPos=1
+						self.SetSashPosition(1)
+						self.imageGlimpse.Update()
+			if (self._toggleStatus and _sashPos == self.resSashPos) or (not self._toggleStatus and _sashPos == 1):
+				self._toggleTimer.Stop()
+				del self._toggleTimer
+				self.sashPos=_sashPos
+				#print self.sashPos
+				if _sashPos<10:
+					mainC.setSashPos(-self.resSashPos)
+				else:
+					mainC.setSashPos(_sashPos)
+				self.ig_prevent_size(False)
+
+		self._toggleTimer=wx.Timer(self, -1)
+		if self.GetSashPosition()>9:
+			self._toggleStatus=False 		#表示收起list
+			self.SetMinimumPaneSize(1)
+			self.SetSashSize(0)
 		else:
-			mainC.setSashPos(self.sashPos)
-		self.ig_prevent_size(False)
+			self._toggleStatus=True 		#表示展开list
+			self.SetSashSize(3)
+		self.Bind(wx.EVT_TIMER, _toggleSash, self._toggleTimer)
+		self._toggleTimer.Start(2)
+		#self.imageGlimpse.Update()
 
 	def OnSashChanging(self, e):
 		#self.sashPos=e.GetSashPosition()
@@ -779,7 +844,7 @@ class MainWindow(wx.SplitterWindow):
 			fl.PopupMenu(fl.popupFolderMenu, pos)
 
 	def onSize(self, e):
-		size=self.GetSize()
+		#size=self.GetSize()
 		#print self.sashPos
 		#self.imageGlimpse.SetSize((size.x-self.sashPos, size.y))
 		e.Skip()

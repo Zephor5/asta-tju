@@ -9,10 +9,10 @@ _Author='Zephor'
 class MC(object):
 	"""docstring for selfonf"""
 	def __init__(self):
-		self.confDir='.'+PS+'conf'+PS
+		self.confDir=os.getcwd()+PS+'conf'+PS
 		self.iniFile=self.confDir+'ini.data'
 		self.size=(800,600)
-		self.imPath='.'+PS+'images'+PS
+		self.imPath=os.getcwd()+PS+'images'+PS
 		self.welIm=self.imPath+'welcome.png'
 		self.welT=500
 		self.icon=self.imPath+'icon.ico'
