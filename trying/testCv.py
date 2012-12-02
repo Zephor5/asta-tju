@@ -1,21 +1,21 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
-# face_detect.py
+# testCv.py
 
-# Face Detection using OpenCV. Based on sample code from:
-# http://python.pastebin.com/m76db1d6b
+# opencv2 api测试
+# http://blog.x-5.me
 
-# Usage: python face_detect.py <image_file>
+# Usage: custom
 
 import os,cv2,time,numpy#,cPickle as P
 
 def timeit(func):
  
     # 定义一个内嵌的包装函数，给传入的函数加上计时功能的包装
-    def wrapper():
+    def wrapper(self):
         start = time.clock()
-        func()
+        func(self)
         end =time.clock()
         print 'used:', end - start
  
@@ -47,7 +47,7 @@ class cvTest(object):
             cv2.namedWindow(self.winname,1)
             cv2.imshow(self.winname,self.curImage)
             cv2.waitKey(0)
-
+    @timeit
     def plus(self):
         for x in xrange(0,len(self.curImage)):
             for y in xrange(0,len(self.curImage[x])):
@@ -62,19 +62,25 @@ class cvTest(object):
             x+=1
             #break
         #print x,y,z
+    @timeit
     def test(self):
         #P.dump(self.image,file('test','w'))
-        print self.curImage.__len__()
+        #print self.curImage.__len__()
         #x=[[[12,12,12],[12,12,12]],[[12,12,12],[12,12,12]]]
         #print type(x),numpy.ndarray(1)
         #cv2.creatImage([[[123,123,123]]])
         #for x in range(1,10):
             #print x
+        #x=9
+        #self.curImage=cv2.blur(self.image, (x,x))
+        #self.curImage=cv2.medianBlur(self.image, x)
+        a,self.curImage=cv2.threshold(self.image, 200, 255, cv2.THRESH_BINARY)
 
 test=cvTest('1.jpg')
 #test.showImage()
-test.plus=timeit(test.plus)
-test.plus()
+#test.plus=timeit(test.plus)
+#test.plus()
+test.test()
 test.showImage({u'原图'.encode('gbk'):test.image,u'变换后'.encode('gbk'):test.curImage})
 #test.test()
 #test.showImage()

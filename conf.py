@@ -23,6 +23,7 @@ class MC(object):
 		self.imConSize=(180,190)
 		self.waitingFrameSize=(180,80)
 		self.waitingIm=self.imPath+'waiting.gif'
+		self.blankIm=self.imPath+'welcome.png'
 
 		self.initConf()
 

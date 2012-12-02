@@ -1,172 +1,49 @@
 #coding=utf-8
 #start at 2012-10-19
 from __future__ import division		#this must be put at the beginning
-import wx,os,time as T
+import wx,os,threading as TD#,time as T
 from os import sep as PS
-import wx.animate as _A
-from wx.lib.agw.advancedsplash import AdvancedSplash
+#import wx.animate as _A
 from wx.lib.agw.multidirdialog import MultiDirDialog
 
-import conf
+import commonUITools as _ct
+from workspace import WorkFrame
 
 #_ScrollBarWidth=18
 _WaitingHandler=None
-
+_UI_BLANK=0
+_UI_SELECTED=1
+_UI_HOVER=2
 #try:
-mainC=conf.MC()
+#_ct.mainC=conf.MC()
 #except Exception, e:
 #	print 'conf set error',e
 #	exit()
 
-Iround=lambda x,d=0:int(round(x,d))
-
-def getFileName(path):
-	if os.path.isfile(path):
-		return path[path.rindex(PS)+1:]
-	return ''
-
-def ShowTip(parent, message, title=u'提示', style=wx.OK|wx.CENTRE):
-	tip=wx.MessageDialog(parent, message, title, style)
-	tip.ShowModal()
-	tip.Destroy()
-
-def frameFadeOut(frame):
-	#print T.clock()-startT,'30'
-	#if sumt<256:
-		#sumt=256
-	#per=int(round(sumt/256))
-	#per=round(per/1000,3)
-	#print per,'per'
-	"""for i in xrange(0,255):
-		frame.SetTransparent(255-i)
-		#if i != 255:
-			##print T.clock()-startT,'40'
-		T.sleep(0.001)
-			##print T.clock()-startT,'42'
-	#print T.clock()-startT,'43'
-	frame.Destroy()"""
-	def OnTimer(e):
-		if frame._timern < 236:
-			frame._timern+=20
-			#print frame._timern
-			frame.SetTransparent(255-frame._timern)
-		else:
-			frame._timer.Stop()
-			del frame._timer
-			frame.Destroy()
-	frame._timer=wx.Timer(frame, -1)
-	frame._timern=0
-	frame.Bind(wx.EVT_TIMER, OnTimer, frame._timer)
-	frame._timer.Start(30)
-
-class MySplashFrame(AdvancedSplash):
-	"""docstring for MySplashFrame"""
-	def __init__(self, app, bmp, size, timeout):
-		super(self.__class__, self).__init__(None, -1, (-1,-1), size, 32786, bmp, timeout)
-		self.app=app
-		self.Bind(wx.EVT_CLOSE, self.OnClose)
-
-	def OnClose(self, e=None):
-		self.Enable(False)
-		if hasattr(self, '_splashtimer'):
-			self._splashtimer.Stop()
-		if hasattr(self.app, 'mFrame'):
-			del self._splashtimer
-			self.app.mFrame.Show()
-			frameFadeOut(self)
-		else:
-			self._splashtimer.Start(100)
-
-class WaitingFrame(wx.MiniFrame):
-	"""docstring for WaitingFrame"""
-	def __init__(self, control):
-		super(self.__class__, self).__init__(app.mFrame, size=mainC.waitingFrameSize, style=wx.NO_BORDER|wx.STAY_ON_TOP)
-		self.Center()
-		#self.SetTransparent(150)
-		self.SetBackgroundColour('white')
-		ani = _A.Animation(mainC.waitingIm)
-		ctrl = _A.AnimationCtrl(self, -1, ani)
-		#ctrl.SetBackgroundColour('gray')
-		ctrl.Play()
-		wx.StaticText(self, -1, 'please waiting ...', (80, 30), (100,80), wx.ALIGN_CENTER)
-		self.Show(True)
-		control.Enable(False)
-		self.ct=control
-
-	def Hide(self):
-		self.ct.Enable(True)
-		frameFadeOut(self)
-		
-
-class MyMenu(object):
-	"""docstring for MyPopupMenu"""
-	def __init__(self, parent, menuData, type, fontSize=9):
-		super(self.__class__, self).__init__()
-		self.parent=parent
-		if type == 'menubar':
-			self.__obj=self.createMenuBar(menuData)
-		elif type == 'popupMenu':
-			self.__obj = self.createMenu(menuData)
-		else:
-			self.__obj = wx.MenuBar()
-		if hasattr(self.__obj, 'SetFont'):
-			self.__obj.SetFont(wx.Font(fontSize, wx.FONTFAMILY_MAX, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
-
-	def __repr__(self):
-		return 'self.__obj'
-
-	def __str__(self):
-		return str(self.__obj)
-
-	def __getattr__(self, attr):
-		return getattr(self.__obj, attr)
-
-	def get(self):
-		return self.__obj
-
-	def createMenuBar(self, menuData):
-		menuBar=wx.MenuBar()
-		for menu in menuData:
-			menuBar.Append(self.createMenu(menu[1]), menu[0])
-		return menuBar
-
-	def createMenu(self, menuData):
-		menu = wx.Menu()
-		for eachItem in menuData:
-			if len(eachItem) == 2:
-				label = eachItem[0]
-				subMenu = self.createMenu(eachItem[1])
-				menu.AppendMenu(wx.NewId(), label, subMenu)
-			else:
-				self.createMenuItem(menu, *eachItem)
-		return menu
-
-	def createMenuItem(self, menu, label, status, handler, id=-1, kind=wx.ITEM_NORMAL, enable=True):
-		if not label:
-			menu.AppendSeparator()
-			return
-		menuItem = menu.Append(id, label, status, kind)
-		self.parent.Bind(wx.EVT_MENU, handler, menuItem)
-		if not enable:
-			menu.Enable(id, False)
-
 class ImContainer(wx.Window):
 	"""docstring for ImContainer"""
-	def __init__(self, parent, label='', path=mainC.welIm, selected=False, id=-1, pos=wx.DefaultPosition, size=mainC.imConSize):
+	def __init__(self, parent, label='', path=_ct.mainC.blankIm, _ui_status=_UI_BLANK, id=-1, pos=wx.DefaultPosition, size=_ct.mainC.imConSize):
 		super(self.__class__, self).__init__(parent, id, pos, size, wx.TAB_TRAVERSAL | wx.NO_BORDER, label)
 		self.SetBackgroundColour('#FFFFFFFF')
 		#print self.SetTransparent(50)
 		self.imPath=path
 		self.doSize=1
-		self.selected=selected
+		self._ui_status=_ui_status
 		self.pen=wx.Pen(wx.Colour(35, 142,  35, 160))
 		self.hoverBrush=wx.Brush(wx.Colour(35, 142, 35, 20))
 		self.selBrush=wx.Brush(wx.Colour(35, 142, 35, 50))
+		#self._readyToPaint=False
 
+		#self._threadCondition=TD.Condition()
 		self.initBitmap()
 		self.initBuffer()
 		#self.initText()
 		#self.nameText.SetInsertionPoint(0)
+
+		self.initToolTip()
+		#self.toolTip.Bind(wx.EVT_LEFT_UP, self.test)
+		#self.toolTip.Bind(wx.EVT_RIGHT_UP, self.UnSel)
+		#self.toolTip.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)
 
 		self.Bind(wx.EVT_PAINT, self.OnPaint)
 		self.Bind(wx.EVT_SIZE, self.OnSize)
@@ -176,17 +53,20 @@ class ImContainer(wx.Window):
 		self.Bind(wx.EVT_LEFT_UP, self.OnSel)
 		self.Bind(wx.EVT_RIGHT_UP, self.UnSel)
 		self.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)
+		#self.Bind(wx.EVT_CLOSE, self.onClose)
 
 	def initText(self):			#已经被替代
 		sz=self.GetSize()
-		#print Iround(sz.x*0.15)
+		#print _ct.Iround(sz.x*0.15)
 		if hasattr(self, 'nameText'):
 			del self.nameText
 		else:
-			nt=self.nameText=wx.StaticText(self, -1, getFileName(self.imPath), (Iround(sz.x*0.15), sz.y-45), (sz.x,30), wx.ALIGN_CENTER)
-			nt.Wrap(Iround(sz.x*0.7))
+			nt=self.nameText=wx.StaticText(self, -1, _ct.getFileName(self.imPath), (_ct.Iround(sz.x*0.15), sz.y-45), (sz.x,30), wx.ALIGN_CENTER)
+			nt.Wrap(_ct.Iround(sz.x*0.7))
 
 	def initBitmap(self, image_changed=0):
+		#print image_changed
+		#if self._threadCondition.acquire():
 		sz=self.GetSize()
 		self.impos=[4,4]
 		'''if image_changed and hasattr(self, 'gifC'):
@@ -212,38 +92,69 @@ class ImContainer(wx.Window):
 			im = self.image.Copy()
 		x,y=im.GetSize()
 		if x/y > sz.x/(sz.y-30):
-			y=int(round(y*(sz.x-8)/x))
+			y=_ct.Iround(y*(sz.x-8)/x)
 			im.Rescale(sz.x-8, y)
-			self.impos[1]=int(round(abs(sz.y-38-y)/2))
+			self.impos[1]=_ct.Iround(abs(sz.y-38-y)/2)
 		else:
-			x=int(round(x*(sz.y-38)/y))
+			x=_ct.Iround(x*(sz.y-38)/y)
 			im.Rescale(x, sz.y-38)
-			self.impos[0]=int(round(abs(sz.x-x)/2))
+			self.impos[0]=_ct.Iround(abs(sz.x-x)/2)
 		self.pic=im.ConvertToBitmap()
+		self.GetParent().GetParent().Enable(True)
+		self.reInitBuffer=1
+		#self.ProcessEvent(wx.PyCommandEvent(wx.EVT_IDLE.typeId, self.GetId()))
+		#self.initBuffer()
+		#self._readyToPaint=True
+		#self.AddPendingEvent(wx.PyCommandEvent(wx.EVT_PAINT.typeId, self.GetId()))
+		#self._threadCondition.release()
+
+	def InitBitmap(self, *args):
+		#print 'test'
+		if not hasattr(self,'_readThread') or not self._readThread.isAlive():
+			self.GetParent().GetParent().Enable(False)
+			self._readThread=TD.Thread(target=self.InitBitmap, name='InitBitmap', args=args)
+			self._readThread.start()
+		elif self._readThread.isAlive():
+			pass
+			#self._readThread.join()
+			#self.initBitmap(args)
 
 	def initBuffer(self, brush='sel'):
+		#print 't'
 		sz=self.GetSize()
 		self.buffer = wx.EmptyBitmap(sz.x, sz.y)
 		dc=wx.BufferedDC(None, self.buffer)
 		dc=wx.GCDC(dc)
 		dc.SetBackground(wx.Brush(self.GetBackgroundColour()))
 		dc.Clear()
-		if self.selected or brush=='hover' and self.HitTest(wx.GetMousePosition()-self.GetScreenPosition())==wx.HT_WINDOW_INSIDE:
+		if self._ui_status == _UI_SELECTED or brush=='hover' and self.HitTest(wx.GetMousePosition()-self.GetScreenPosition())==wx.HT_WINDOW_INSIDE:
 			dc.SetPen(self.pen)
 			dc.SetBrush(getattr(self, brush+'Brush'))
 			dc.DrawRoundedRectangleRect(wx.Rect(0,0,sz.x,sz.y), 5)
 		if hasattr(self,'pic'):
 			dc.DrawBitmap(self.pic, self.impos[0], self.impos[1], True)
 		#dc.SetFont(wx.Font(9, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
-		name=getFileName(self.imPath)
-		tn=Iround((sz.x-100)/6)+1
-		name=name if len(name)<tn else name[:tn-1]+'...'
-		#namepos=[Iround(sz.x*0.15)]
-		dc.DrawText(name, Iround((sz.x-6*len(name))/2), sz.y-26)
+		if self.imPath != _ct.mainC.blankIm:
+			name=_ct.getFileName(self.imPath)
+			tn=_ct.Iround((sz.x-100)/6)+1
+			name=name if len(name)<tn else name[:tn-1]+'...'
+			#namepos=[_ct.Iround(sz.x*0.15)]
+			dc.DrawText(name, _ct.Iround((sz.x-6*len(name))/2), sz.y-26)
 		self.reInitBuffer = 0
+
+	def initToolTip(self):
+		name=_ct.getFileName(self.imPath)
+		x,y=self.image.GetSize()
+		tip=name+"\n"+str(x)+u'×'+str(y)+u'像素'
+		if hasattr(self, 'toolTip'):
+			self.toolTip.SetTip(tip)
+		else:
+			self.toolTip=wx.ToolTip(tip)
+			self.SetToolTip(self.toolTip)
 
 	def OnPaint(self, e):
 		#print 'paint',self.GetLabel(),self.GetPosition()
+		#if hasattr(self, 'buffer'):
 		wx.BufferedPaintDC(self, self.buffer)
 
 	def OnSize(self, e):
@@ -262,18 +173,29 @@ class ImContainer(wx.Window):
 			self.initBuffer()
 			self.Refresh(0)
 
+		#if self.image.GetSize()
+
 	def OnEnter(self, e):
 		self.paintSel()
+		"""if not hasattr(self, 'toolTip'):
+			self.toolTip=wx.TipWindow(self, 'sometest')"""
 
 	def OnLeave(self, e):
-		self.paintSel('leave')
+		"""if hasattr(self, 'toolTip'):
+			self.toolTip.Destroy()
+			del self.toolTip"""
+		if self.HitTest(wx.GetMousePosition()-self.GetScreenPosition()) == wx.HT_WINDOW_INSIDE:
+			return
+		if self._ui_status != _UI_SELECTED:
+			self._ui_status=_UI_BLANK
+			self.paintSel('leave')
 
 	def OnSel(self, e=None):
 		self.paintSel('selected')
 
 	def UnSel(self, e=None):
-		if self.selected:
-			self.selected=False
+		if self._ui_status == _UI_SELECTED:
+			self._ui_status = _UI_HOVER
 			self.initBuffer('hover')
 			self.Refresh(0)
 			#wx.BufferedPaintDC(self, self.buffer)
@@ -282,16 +204,19 @@ class ImContainer(wx.Window):
 
 	def paintSel(self, case='hover'):
 		#dc.Clear()
-		if case == 'hover' and not self.selected:
-			sz=self.GetSize()
+		if case == 'hover' and self._ui_status == _UI_BLANK:
+			self._ui_status=_UI_HOVER
+			"""sz=self.GetSize()
 			dc=wx.GCDC(wx.ClientDC(self))
 			dc.SetPen(self.pen)
 			dc.SetBrush(self.hoverBrush)
 			dc.DrawRoundedRectangleRect(wx.Rect(0,0,sz.x,sz.y), 5)
 			if hasattr(self,'pic'):
-				dc.DrawBitmap(self.pic, self.impos[0], self.impos[1], True)
-		elif case == 'selected' and not self.selected:
-			self.selected=True
+				dc.DrawBitmap(self.pic, self.impos[0], self.impos[1], True)"""
+			self.initBuffer('hover')
+			self.Refresh(0)
+		elif case == 'selected' and self._ui_status != _UI_SELECTED:
+			self._ui_status=_UI_SELECTED
 			self.initBuffer()
 			self.Refresh(0)
 		elif case == 'leave':
@@ -299,24 +224,39 @@ class ImContainer(wx.Window):
 			self.Refresh(0)
 
 	def OnDClick(self, e):
-		pass
-		print 'test'
+		app=wx.GetApp()
+		if hasattr(app, 'workSpace') and app.workSpace:
+			app.workSpace.OnChangeImg(self.image)
+		else:
+			app.workSpace=WorkFrame(app.mFrame, self.image)
+
+	def Destroy(self):
+		#pass
+		#print 'close'
+		"""if hasattr(self, '_readThread') :#and self._readThread.isAlive():
+			self._readThread.join(0)"""
+		super(self.__class__, self).Destroy()
 
 	def drawImName(self, dc, name, sz, minBorder=30):			#useless
 		pass
 
-	def SetImPath(self, path, selected=False):
+	def SetImPath(self, path, _ui_status=_UI_BLANK):
 		if path != self.imPath:
 			if os.path.isfile(path):
 				self.imPath=path
-				self.selected=selected
+				self.initToolTip()
+				self._ui_status=_ui_status
 				self.initBitmap(1)
 				self.initBuffer()
 				self.Refresh()
-		elif selected and not self.selected:
+		elif _ui_status == _UI_SELECTED and self._ui_status != _UI_SELECTED:
 			self.OnSel()
-		elif self.selected:
+		elif self._ui_status == _UI_SELECTED:
 			self.UnSel()
+
+	def test(self, e):
+		pass
+		#print 'test'
 		
 
 class MyImWindow(wx.Panel):
@@ -324,7 +264,7 @@ class MyImWindow(wx.Panel):
 	def __init__(self, parent, paths, sel='', size=(-1,-1)):
 		super(self.__class__, self).__init__(parent, size=size)
 		self.SetBackgroundColour('white')
-		self.paths=paths if paths else [mainC.welIm]
+		self.paths=paths if paths else [_ct.mainC.blankIm]
 		#print 'client size',parent.GetClientSize()
 		self.parent=parent
 		self.sel=sel
@@ -360,7 +300,8 @@ class MyImWindow(wx.Panel):
 		#print hasattr(__main__, 'app')
 		#print 'app' in globals().keys()
 		if 'app' in globals().keys() and not _WaitingHandler:
-			_WaitingHandler=WaitingFrame(self.parent)
+			_WaitingHandler=_ct.WaitingFrame(self.parent)
+			#DT.Thread(target=_ct.WaitingFrame, args=(self.parent,)).start()
 			wx.Yield()
 		if sel and pn>9 and sel in sps:
 			index=sps.index(sel)
@@ -374,9 +315,9 @@ class MyImWindow(wx.Panel):
 				cWin=self.FindWindowByLabel(label)
 				ss.Remove(cWin)
 				cWin.Destroy()
-			#self.Refresh()
+
 		if not pn:
-			sps=[mainC.welIm]
+			sps=[_ct.mainC.blankIm]
 		for i,n in enumerate(xrange(start,start+9 if pn>8 else pn if pn else 1)):
 			label='cpic_'+str(i)
 			#print label
@@ -385,7 +326,8 @@ class MyImWindow(wx.Panel):
 				cWin=ImContainer(self, label, sps[n], sps[n]==self.sel)
 				ss.Add(cWin, 1, wx.EXPAND)
 			else:
-				cWin.SetImPath(sps[n], sps[n]==self.sel)
+				cWin.SetImPath(sps[n])
+
 		l = len(ss.GetChildren())
 		r,c=self.sortRC(l)
 		ss.SetRows(r)
@@ -436,16 +378,18 @@ class MyImWindow(wx.Panel):
 			self.Init()
 
 	def test(self, e):			#测试用
-		global _WaitingHandler
+		"""global _WaitingHandler
 		if _WaitingHandler:
 			_WaitingHandler.Hide()
 		else:
-			_WaitingHandler=WaitingFrame(self.parent)
+			_WaitingHandler=_ct.WaitingFrame(self.parent)"""
 		#ss=self.Sizer
 		#ss.Add(ImContainer(self, 'label', self.paths[0]))
 		#self.Init()
 		#print e.GetEventHandler()
 		#print len(ss.GetChildren())
+		for c in self.Sizer.GetChildren():
+			print c.GetWindow()._readThread.isAlive()
 
 
 class MainWindow(wx.SplitterWindow):
@@ -491,9 +435,9 @@ class MainWindow(wx.SplitterWindow):
 		#e.Skip()
 
 	def initSash(self):
-		self.sashPos=int(round(self.GetParent().GetClientSize().x*0.27)) if mainC.sashPos==0 else mainC.sashPos
-		if self.sashPos>mainC.maxSashPos:
-			self.sashPos=mainC.maxSashPos
+		self.sashPos=_ct.Iround(self.GetParent().GetClientSize().x*0.27) if _ct.mainC.sashPos==0 else _ct.mainC.sashPos
+		if self.sashPos>_ct.mainC.maxSashPos:
+			self.sashPos=_ct.mainC.maxSashPos
 		if self.sashPos<0:
 			self.resSashPos=-self.sashPos
 			self.sashPos=1
@@ -506,7 +450,7 @@ class MainWindow(wx.SplitterWindow):
 
 	def initFolderList(self, old=None):
 		global _WaitingHandler
-		mF=mainC.listFolder
+		mF=_ct.mainC.listFolder
 		fl=self.folderList
 		changes=[[],[]]
 		if old is None:
@@ -550,8 +494,8 @@ class MainWindow(wx.SplitterWindow):
 				fl.SelectItem(fl.GetLastChild(root))
 			elif old:
 				fl.SelectItem(self.GetItemByText(changes[0][0]))
-		fl.popupFolderMenu = MyMenu(fl, self.MenuData('folder'), 'popupMenu').get()
-		fl.popupFileMenu = MyMenu(fl, self.MenuData('file'), 'popupMenu').get()
+		fl.popupFolderMenu = _ct.MyMenu(fl, self.MenuData('folder'), 'popupMenu').get()
+		fl.popupFileMenu = _ct.MyMenu(fl, self.MenuData('file'), 'popupMenu').get()
 		if _WaitingHandler:
 			_WaitingHandler.Hide()
 
@@ -590,7 +534,7 @@ class MainWindow(wx.SplitterWindow):
 		#lis=os.listdir(path)
 		tr=os.walk(path)
 		data=[]
-		imtype=mainC.imTypes
+		imtype=_ct.mainC.imTypes
 		def Lindex(l,i):
 			if i in l:
 				return l.index(i)
@@ -642,8 +586,8 @@ class MainWindow(wx.SplitterWindow):
 				except Exception:
 					raise Exception('filelist error')
 		if not data:
-			old=mainC.listFolder[:]
-			mainC.delListFolder([path])
+			old=_ct.mainC.listFolder[:]
+			_ct.mainC.delListFolder([path])
 			self.initFolderList(old)
 		else:
 			return data
@@ -697,8 +641,8 @@ class MainWindow(wx.SplitterWindow):
 
 	def DelListFolder(self, e):
 		fl=self.folderList
-		old=mainC.listFolder[:]
-		mainC.delListFolder([fl.GetItemText(fl.GetSelection())])
+		old=_ct.mainC.listFolder[:]
+		_ct.mainC.delListFolder([fl.GetItemText(fl.GetSelection())])
 		self.initFolderList(old)
 
 	def OnSelChanged(self, e=None):
@@ -712,18 +656,65 @@ class MainWindow(wx.SplitterWindow):
 			#print pItem,cItem
 			if pItem != cItem:
 				self.preItem=cItem
-				self.imageGlimpse.SetPaths(self.ItemGetListPaths(item), self.ItemGetPath(item))
+				self.imageGlimpse.SetPaths(self.ItemGetListPaths(item), path)
 			else:
-				self.imageGlimpse.SetListSel(self.ItemGetPath(item))
+				self.imageGlimpse.SetListSel(path)
 		except:
 			raise
+		else:
+			self.initStatus()
+			
+	def initStatus(self):
+		fl=self.folderList
+		item=fl.GetSelection()
+		path=self.ItemGetPath(item)
+		i=0 	#选中文件索引
+		f=0 	#文件夹数
+		n=0 	#文件及文件夹总数
+		if os.path.isfile(path):
+			cItem=os.path.dirname(path)
+			n=fl.GetChildrenCount(fl.GetItemParent(item), False)
+			while item and not fl.GetChildrenCount(item, False):
+				item=fl.GetPrevSibling(item)
+				i+=1
+			while item and fl.GetChildrenCount(item, False):
+				item=fl.GetPrevSibling(item)
+				f+=1
+		else:
+			cItem=path
+			n=fl.GetChildrenCount(item, False)
+			item=fl.GetFirstChild(item)[0]
+			while item and fl.GetChildrenCount(item, False):
+				item=fl.GetNextSibling(item)
+				f+=1
+		cItem=cItem if len(cItem)<30 else cItem[:27]+'...'
+
+		statusText0=u'目录：'+cItem
+		statusText1=''
+		statusText2=''
+		if i:
+			statusText1+=u'图片：'+str(n)+u'张   选中第'+str(i)+u'张'
+			if f:
+				statusText2+=str(f)+u'个子目录'
+		else:
+			if n:
+				if n-f:
+					statusText1+=u'图片：'+str(n-f)+u"张"
+				if f:
+					statusText2+=str(f)+u'个子目录'
+			else:
+				statusText1+=u'目录木有要找的东东'
+		sb=self.GetParent().statusBar
+		sb.SetStatusText(statusText0, 0)
+		sb.SetStatusText(statusText1, 1)
+		sb.SetStatusText(statusText2, 2)
 
 	def OnActivated(self, e):
 		pass
 
 	def OnToggleFL(self, e=None):
 		if self.sashPos<10 and not hasattr(self, 'resSashPos'):
-			self.resSashPos=int(round(self.GetParent().GetClientSize().x*0.27))
+			self.resSashPos=_ct.Iround(self.GetParent().GetClientSize().x*0.27)
 		else:
 			if self.sashPos>10:
 				self.resSashPos=self.sashPos
@@ -731,7 +722,7 @@ class MainWindow(wx.SplitterWindow):
 		self.ig_prevent_size()
 		"""if self.GetSashPosition()>9:
 			self.SetMinimumPaneSize(0)
-			t=int(round(500/sp))
+			t=_ct.Iround(500/sp)
 			if t<1:
 				t=1
 			for x in xrange(0,sp-1):
@@ -750,7 +741,7 @@ class MainWindow(wx.SplitterWindow):
 			#self.SplitVertically(fl, self.imageGlimpse, 1)
 			#fl.Show()
 			self.SetSashSize(3)
-			t=int(round(400/sp))
+			t=_ct.Iround(400/sp)
 			for x in xrange(2,sp+1):
 				self.SetSashPosition(x)
 				self.imageGlimpse.Update()
@@ -785,9 +776,9 @@ class MainWindow(wx.SplitterWindow):
 				self.sashPos=_sashPos
 				#print self.sashPos
 				if _sashPos<10:
-					mainC.setSashPos(-self.resSashPos)
+					_ct.mainC.setSashPos(-self.resSashPos)
 				else:
-					mainC.setSashPos(_sashPos)
+					_ct.mainC.setSashPos(_sashPos)
 				self.ig_prevent_size(False)
 
 		self._toggleTimer=wx.Timer(self, -1)
@@ -814,7 +805,7 @@ class MainWindow(wx.SplitterWindow):
 		#print self.imageGlimpse.Sizer.GetChildren()[0].GetWindow().doSize
 		self.ig_prevent_size(False)
 		self.sashPos=e.GetSashPosition()
-		mainC.setSashPos(self.sashPos)
+		_ct.mainC.setSashPos(self.sashPos)
 
 	def ig_prevent_size(self, t=True):
 		ig_children=self.imageGlimpse.Sizer.GetChildren()
@@ -849,22 +840,21 @@ class MainWindow(wx.SplitterWindow):
 		#self.imageGlimpse.SetSize((size.x-self.sashPos, size.y))
 		e.Skip()
 
-
 class MainFrame(wx.Frame):
 	"""docstring for MainFrame"""
 	def __init__(self, title,size):
 		super(self.__class__, self).__init__(None,-1,title,(-1,-1),size)
-		self.icon=wx.Icon(mainC.icon, wx.BITMAP_TYPE_ICO)
+		self.icon=wx.Icon(_ct.mainC.icon, wx.BITMAP_TYPE_ICO)
 		self.SetIcon(self.icon)
 		self.Center()
-		self.title = title
-		self.size = size
+		#self.title = title
+		#self.size = size
 		#print T.clock()-startT,'271'
 		self.window = MainWindow(self)
 		#self.window.SetBackgroundColour('#')
 		#self.SetFont(wx.Font(20, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
 		self.initStatusBar()
-		self.menuBar=MyMenu(self, self.menuData(), 'menubar', 12)
+		self.menuBar=_ct.MyMenu(self, self.menuData(), 'menubar', 12)
 		self.SetMenuBar(self.menuBar.get())
 		self.initBind()
 
@@ -892,33 +882,35 @@ class MainFrame(wx.Frame):
 
 	def initStatusBar(self):
 		self.statusBar=self.CreateStatusBar()
+		self.statusBar.SetFieldsCount(3)
+		self.statusBar.SetStatusWidths([-2, -2, -1])
 
 	def setFolders(self, folders):
 		global _WaitingHandler
-		old=mainC.listFolder[:]
-		mainC.addListFolder(folders)
-		if mainC.listFolder != old:
+		old=_ct.mainC.listFolder[:]
+		_ct.mainC.addListFolder(folders)
+		if _ct.mainC.listFolder != old:
 			#app.waiting.Show()
 			#print _WaitingHandler
-			_WaitingHandler=WaitingFrame(self)
+			_WaitingHandler=_ct.WaitingFrame(self)
 			wx.Yield()
 			self.window.initFolderList(old)
 		else:
-			ShowTip(self, u'选择的文件重复或已包含，若要缩小文件夹范围请先删除已包含的父文件夹!', u'提示')
+			_ct.ShowTip(self, u'选择的文件重复或已包含，若要缩小文件夹范围请先删除已包含的父文件夹!', u'提示')
 
 	def OnWindowMotion(self, e):
 		self.statusBar.SetStatusText(str(e.GetPositionTuple()))
 
 	def OnNew(self, e): pass
 	def OnOpen(self, e):
-		openD=MultiDirDialog(self, u'选择一个或多个文件夹', u'浏览文件夹', mainC.defaultPath)
+		openD=MultiDirDialog(self, u'选择一个或多个文件夹', u'浏览文件夹', _ct.mainC.defaultPath)
 		if openD.ShowModal() == wx.ID_OK:
 			paths=openD.GetPaths()
 			paths=filter(lambda item:item.find(PS)>-1,paths)
 			if paths:
 				self.setFolders(paths)
 			else:
-				ShowTip(self, u'文件夹暂不支持整个硬盘分区直接加入')
+				_ct.ShowTip(self, u'文件夹暂不支持整个硬盘分区直接加入')
 		openD.Destroy()
 
 	def OnSave(self, e): pass
@@ -938,7 +930,7 @@ class MainFrame(wx.Frame):
 	def OnSize(self, e):
 		#print 'OnSize'
 		if not self.IsMaximized():
-			mainC.setSize(self.GetSize())
+			_ct.mainC.setSize(self.GetSize())
 		self.window.initSash()
 		e.Skip()
 
@@ -953,20 +945,20 @@ class MainFrame(wx.Frame):
 class PicM(wx.App):
 	"""docstring for PicManager"""
 	def OnInit(self):
-		bmp=wx.Image(mainC.welIm, wx.BITMAP_TYPE_PNG).ConvertToBitmap()
+		bmp=wx.Image(_ct.mainC.blankIm, wx.BITMAP_TYPE_PNG).ConvertToBitmap()
 		bmp.SetMask(wx.Mask(bmp))
-		MySplashFrame(self, bmp, (bmp.GetWidth(),bmp.GetHeight()),mainC.welT)
+		_ct.MySplashFrame(self, bmp, (bmp.GetWidth(),bmp.GetHeight()),_ct.mainC.welT)
 		wx.Yield()
 		#print T.clock()-startT,'344'
-		self.mFrame=MainFrame(conf._Title, mainC.size)
+		self.mFrame=MainFrame(_ct._Title, _ct.mainC.size)
 		#print T.clock()-startT,'346'
 		self.SetTopWindow(self.mFrame)
-		#self.waiting=WaitingFrame(self.mFrame)
+		#self.waiting=_ct.WaitingFrame(self.mFrame)
 		#self.waiting.Show()
 		return True
 
-if mainC and __name__=='__main__':
+if _ct.mainC and __name__=='__main__':
 	#startT=T.clock()
 	app=PicM(0)
 	app.MainLoop()
-	mainC.save()
+	_ct.mainC.save()
