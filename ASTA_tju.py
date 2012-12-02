@@ -244,10 +244,10 @@ class ImContainer(wx.Window):
 		if path != self.imPath:
 			if os.path.isfile(path):
 				self.imPath=path
-				self.initToolTip()
 				self._ui_status=_ui_status
 				self.initBitmap(1)
 				self.initBuffer()
+				self.initToolTip()
 				self.Refresh()
 		elif _ui_status == _UI_SELECTED and self._ui_status != _UI_SELECTED:
 			self.OnSel()

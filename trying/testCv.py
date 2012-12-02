@@ -7,8 +7,8 @@
 # http://blog.x-5.me
 
 # Usage: custom
-
-import os,cv2,time,numpy#,cPickle as P
+from __future__ import division     #this must be put at the beginning
+import os,cv2,time,numpy as np#,cPickle as P
 
 def timeit(func):
  
@@ -33,18 +33,26 @@ class cvTest(object):
             exit()
         self.winname='testcv'
         self.image = cv2.imread(imname)
-        self.curImage=numpy.copy(self.image)
+        x=np.size(self.image,1)
+        y=np.size(self.image,0)
+        if x>1000 or y>700:
+            if y/x>0.7:
+                self.image=cv2.resize(self.image, (int(round(x*700/y)), 700))
+            else:
+                self.image=cv2.resize(self.image, (1000, int(round(y*1000/x))))
+        self.curImage=np.copy(self.image)
         #print self.image.
 
     def showImage(self,dic=None):
         #print self.image[0][0][1]
         if type(dic) == dict:
             for wname in dic:
-                cv2.namedWindow(wname,1)
-                cv2.imshow(wname,dic[wname])
+                #cv2.namedWindow(wname,1)
+                if hasattr(self, dic[wname]):
+                    cv2.imshow(wname,getattr(self, dic[wname]))
             cv2.waitKey(0)
         else:
-            cv2.namedWindow(self.winname,1)
+            #cv2.namedWindow(self.winname,1)
             cv2.imshow(self.winname,self.curImage)
             cv2.waitKey(0)
     @timeit
@@ -62,26 +70,35 @@ class cvTest(object):
             x+=1
             #break
         #print x,y,z
+
     @timeit
     def test(self):
         #P.dump(self.image,file('test','w'))
         #print self.curImage.__len__()
         #x=[[[12,12,12],[12,12,12]],[[12,12,12],[12,12,12]]]
-        #print type(x),numpy.ndarray(1)
+        #print type(x),np.ndarray(1)
         #cv2.creatImage([[[123,123,123]]])
         #for x in range(1,10):
             #print x
         #x=9
         #self.curImage=cv2.blur(self.image, (x,x))
         #self.curImage=cv2.medianBlur(self.image, x)
-        a,self.curImage=cv2.threshold(self.image, 200, 255, cv2.THRESH_BINARY)
+        #a,self.curImage=cv2.threshold(self.image, 150, 255, cv2.THRESH_BINARY)
+        self.curImage=cv2.cvtColor(self.image, 6)
+        a,self.curImage=cv2.threshold(self.curImage, 180, 255, cv2.THRESH_BINARY)
+        self.image2=cv2.cvtColor(self.image, 7)
+        a,self.image2=cv2.threshold(self.image2, 180, 255, cv2.THRESH_BINARY)
 
-test=cvTest('1.jpg')
+test=cvTest('test.jpg')
 #test.showImage()
 #test.plus=timeit(test.plus)
 #test.plus()
 test.test()
-test.showImage({u'原图'.encode('gbk'):test.image,u'变换后'.encode('gbk'):test.curImage})
+test.showImage({
+    u'原图'.encode('gbk'):'image',
+    u'变换1'.encode('gbk'):'curImage',
+    u'变换2'.encode('gbk'):'image2'
+    })
 #test.test()
 #test.showImage()
 #print type(test.image)
