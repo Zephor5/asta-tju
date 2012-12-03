@@ -141,7 +141,7 @@ class MyMenu(object):
 		if not enable:
 			menu.Enable(id, False)
 
-class MyToolTip(wx.ToolTip, wx.EvtHandler):
+class MyToolTip(wx.ToolTip, wx.EvtHandler):			#unused
 	"""docstring for MyToolTip"""
 	def __init__(self, text=''):
 		wx.ToolTip.__init__(self, text)

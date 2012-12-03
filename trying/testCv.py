@@ -86,10 +86,10 @@ class cvTest(object):
         #a,self.curImage=cv2.threshold(self.image, 150, 255, cv2.THRESH_BINARY)
         self.curImage=cv2.cvtColor(self.image, 6)
         a,self.curImage=cv2.threshold(self.curImage, 180, 255, cv2.THRESH_BINARY)
-        self.image2=cv2.cvtColor(self.image, 7)
-        a,self.image2=cv2.threshold(self.image2, 180, 255, cv2.THRESH_BINARY)
+        #self.image2=cv2.cvtColor(self.image, 7)
+        a,self.image2=cv2.threshold(self.image, 180, 255, cv2.THRESH_BINARY)
 
-test=cvTest('test.jpg')
+test=cvTest('1.jpg')
 #test.showImage()
 #test.plus=timeit(test.plus)
 #test.plus()

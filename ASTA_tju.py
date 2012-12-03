@@ -28,6 +28,8 @@ class ImContainer(wx.Window):
 		#print self.SetTransparent(50)
 		self.imPath=path
 		self.doSize=1
+		self._border=4
+		self._nameSpaceHeight=30
 		self._ui_status=_ui_status
 		self.pen=wx.Pen(wx.Colour(35, 142,  35, 160))
 		self.hoverBrush=wx.Brush(wx.Colour(35, 142, 35, 20))
@@ -44,15 +46,24 @@ class ImContainer(wx.Window):
 		#self.toolTip.Bind(wx.EVT_LEFT_UP, self.test)
 		#self.toolTip.Bind(wx.EVT_RIGHT_UP, self.UnSel)
 		#self.toolTip.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)
+		self.initBind()
 
+	def initBind(self):
 		self.Bind(wx.EVT_PAINT, self.OnPaint)
 		self.Bind(wx.EVT_SIZE, self.OnSize)
 		self.Bind(wx.EVT_IDLE, self.OnIdle)
-		self.Bind(wx.EVT_ENTER_WINDOW, self.OnEnter)
-		self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeave)
-		self.Bind(wx.EVT_LEFT_UP, self.OnSel)
-		self.Bind(wx.EVT_RIGHT_UP, self.UnSel)
-		self.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)
+		if self.imPath != _ct.mainC.blankIm:
+			self.Bind(wx.EVT_ENTER_WINDOW, self.OnEnter)
+			self.Bind(wx.EVT_LEAVE_WINDOW, self.OnLeave)
+			self.Bind(wx.EVT_LEFT_UP, self.OnSel)
+			self.Bind(wx.EVT_RIGHT_UP, self.UnSel)
+			self.Bind(wx.EVT_LEFT_DCLICK, self.OnDClick)
+		else:
+			self.Unbind(wx.EVT_ENTER_WINDOW)
+			self.Unbind(wx.EVT_LEAVE_WINDOW)
+			self.Unbind(wx.EVT_LEFT_UP)
+			self.Unbind(wx.EVT_RIGHT_UP)
+			self.Unbind(wx.EVT_LEFT_DCLICK)
 		#self.Bind(wx.EVT_CLOSE, self.onClose)
 
 	def initText(self):			#已经被替代
@@ -68,7 +79,9 @@ class ImContainer(wx.Window):
 		#print image_changed
 		#if self._threadCondition.acquire():
 		sz=self.GetSize()
-		self.impos=[4,4]
+		sz.x=sz.x-self._border*2
+		sz.y=sz.y-self._border*2-self._nameSpaceHeight
+		self.impos=[self._border, self._border]
 		'''if image_changed and hasattr(self, 'gifC'):
 			#print 'del'
 			self.gifC.Stop()
@@ -91,14 +104,20 @@ class ImContainer(wx.Window):
 			self.image=wx.Image(self.imPath)
 			im = self.image.Copy()
 		x,y=im.GetSize()
-		if x/y > sz.x/(sz.y-30):
-			y=_ct.Iround(y*(sz.x-8)/x)
-			im.Rescale(sz.x-8, y)
-			self.impos[1]=_ct.Iround(abs(sz.y-38-y)/2)
+
+		if x/y > sz.x/sz.y:
+			if x>sz.x or y>sz.y:
+				y=_ct.Iround(y*sz.x/x)
+				im.Rescale(sz.x, y)
+				x=sz.x
 		else:
-			x=_ct.Iround(x*(sz.y-38)/y)
-			im.Rescale(x, sz.y-38)
-			self.impos[0]=_ct.Iround(abs(sz.x-x)/2)
+			if x>sz.x or y>sz.y:
+				x=_ct.Iround(x*sz.y/y)
+				im.Rescale(x, sz.y)
+				y=sz.y
+		self.impos[0]=_ct.Iround(abs(sz.x-x)/2)+self._border
+		self.impos[1]=_ct.Iround(abs(sz.y-y)/2)+self._border
+
 		self.pic=im.ConvertToBitmap()
 		self.GetParent().GetParent().Enable(True)
 		self.reInitBuffer=1
@@ -108,7 +127,7 @@ class ImContainer(wx.Window):
 		#self.AddPendingEvent(wx.PyCommandEvent(wx.EVT_PAINT.typeId, self.GetId()))
 		#self._threadCondition.release()
 
-	def InitBitmap(self, *args):
+	def InitBitmap(self, *args):		#not used
 		#print 'test'
 		if not hasattr(self,'_readThread') or not self._readThread.isAlive():
 			self.GetParent().GetParent().Enable(False)
@@ -143,6 +162,10 @@ class ImContainer(wx.Window):
 		self.reInitBuffer = 0
 
 	def initToolTip(self):
+		if self.imPath == _ct.mainC.blankIm:
+			if hasattr(self, 'toolTip'):
+				del self.toolTip
+			return
 		name=_ct.getFileName(self.imPath)
 		x,y=self.image.GetSize()
 		tip=name+"\n"+str(x)+u'×'+str(y)+u'像素'
@@ -244,6 +267,7 @@ class ImContainer(wx.Window):
 		if path != self.imPath:
 			if os.path.isfile(path):
 				self.imPath=path
+				self.initBind()
 				self._ui_status=_ui_status
 				self.initBitmap(1)
 				self.initBuffer()
