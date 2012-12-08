@@ -1,17 +1,20 @@
 #coding=utf-8
-import wx
+import wx,cv2,numpy as _np
+#from os import sep as PS
 
 import commonUITools as _ct
 
 class WorkFrame(wx.Frame):
 	"""
 	"""
-	def __init__(self, parent, img, id=-1, title='working', position=(-1,-1), size=(-1,-1)):
+	def __init__(self, parent, info, id=-1, title='working', position=(-1,-1), size=(-1,-1)):
 		super(self.__class__, self).__init__(parent, id, title, position, size)
 		self.SetIcon(parent.icon)
 		self.Center()
 
-		self._image=img
+		self._image=info['image']
+		self._image_path=info['path']
+		#print _np.size(self._image,2)
 
 		self.initStatusBar()
 
@@ -20,6 +23,7 @@ class WorkFrame(wx.Frame):
 		self.initBind()
 
 		self.Show()
+		#cv2.imshow(ip[ip.rindex(PS)+1:ip.rindex('.')], self._image)
 
 	def initStatusBar(self):
 		self.statusBar=self.CreateStatusBar()
@@ -45,9 +49,42 @@ class WorkFrame(wx.Frame):
 					("Quit\tCtrl+Q", u"退出", self.OnQuit))),
 				 (u"视图",(
 				 	("blank", u"暂空缺", self.test),
-				 	('test', '', self.test)))]
+				 	('test', '', self.test))),
+				 (u"测量",(
+				 	(u"预处理", u"预处理照片", self.pre_processing),
+				 	(u"模糊识别", u"模糊识别信息", self.fuzzy_recognition),
+				 	(u"坐标系建立",(
+				 		(u"建立照片坐标系", u"something for tip", self.pic_coordinate_system_build),
+				 		(u"建立现实坐标系", u"something for tip", self.real_coordinate_system_build))),
+				 	(u"数据还原", u"前面步骤必须已经完成", self.data_restoration)))]
 
-	def OnChangeImg(self, img):
+	def OnChangeImg(self, info):
+		if self._image_path != info['path']:
+			if self.status_check():
+				self._image_path=info['path']
+				self._image=info['image']
+			else:
+				pass
+
+	def status_check(self):
+		pass
+		return True
+
+	def pre_processing(self, e=None):
+		x,y=self._image.GetSize()
+		img=_np.ndarray((y,x,3), _np.uint8, self._image.GetDataBuffer())
+		cv2.imshow('cv2_show', img)
+
+	def fuzzy_recognition(self, e=None):
+		pass
+
+	def pic_coordinate_system_build(self, e=None):
+		pass
+
+	def real_coordinate_system_build(self, e=None):
+		pass
+
+	def data_restoration(self, e=None):
 		pass
 
 	def OnNew(self, e):

@@ -3,6 +3,7 @@
 from __future__ import division		#this must be put at the beginning
 import wx,os,threading as TD#,time as T
 from os import sep as PS
+import cv2,numpy as _np
 #import wx.animate as _A
 from wx.lib.agw.multidirdialog import MultiDirDialog
 
@@ -248,10 +249,11 @@ class ImContainer(wx.Window):
 
 	def OnDClick(self, e):
 		app=wx.GetApp()
+		info={'path':self.imPath, 'image':self.image}
 		if hasattr(app, 'workSpace') and app.workSpace:
-			app.workSpace.OnChangeImg(self.image)
+			app.workSpace.OnChangeImg(info)
 		else:
-			app.workSpace=WorkFrame(app.mFrame, self.image)
+			app.workSpace=WorkFrame(app.mFrame, info, size=(900, 600))
 
 	def Destroy(self):
 		#pass
@@ -413,7 +415,15 @@ class MyImWindow(wx.Panel):
 		#print e.GetEventHandler()
 		#print len(ss.GetChildren())
 		for c in self.Sizer.GetChildren():
-			print c.GetWindow()._readThread.isAlive()
+			si=c.GetWindow().image
+			#print type(si.GetData())
+			x,y=si.GetSize()
+			arr=_np.ndarray((y,x,3), _np.uint8, si.GetDataBuffer())
+			if _np.size(arr,1)>1000 or _np.size(arr, 2)>650:
+				arr=cv2.resize(arr, (int(_np.size(arr,1)/5), int(_np.size(arr,0)/5)))
+			arr=cv2.cvtColor(arr, 6)
+			cv2.imshow('test', arr)
+			break
 
 
 class MainWindow(wx.SplitterWindow):
@@ -491,7 +501,7 @@ class MainWindow(wx.SplitterWindow):
 		if not mF or mF == ['']:
 			fl.DeleteAllItems()
 			root=fl.AddRoot("None")
-			self.AddTreeNodes(root, [u'未选择文件夹'])
+			self.AddTreeNodes(root, ['__None__'])
 			fl.SelectItem(fl.GetFirstVisibleItem())
 			return
 		root=fl.GetRootItem()
@@ -537,28 +547,43 @@ class MainWindow(wx.SplitterWindow):
 		Recursively traverses the data structure, adding tree nodes to
 		match it.
 		"""
+		imtypes=_ct.mainC.imTypes
+		def check(item):
+			if isinstance(item, (str, unicode)):
+				if '.' in item and item.split('.')[-1].lower() in imtypes:
+					return False
+				else:
+					return True
+			if len(item)>1 and len(item[1]) == 1:
+				check(item[1][0])
+			else:
+				return False
 		for item in items:
 			rt=isinstance(item, (str, unicode))
 			if rt:
-				self.folderList.AppendItem(parentItem, item)
+				if '.' in item and item.split('.')[-1].lower() in imtypes:
+					self.folderList.AppendItem(parentItem, item)
+				elif item == '__None__':
+					self.folderList.AppendItem(parentItem, u'未选择文件夹')
+				else:
+					continue
 			else:
 				if len(item)>1:
-					newItem = self.folderList.AppendItem(parentItem, item[0])
-					self.AddTreeNodes(newItem, item[1])
-				else:
-					if rt:
-						self.folderList.AppendItem(parentItem, item)
+					if len(item[1]) == 1 and check(item[1][0]):
+						continue
 					else:
-						self.AddTreeNodes(parentItem, item)
+						newItem = self.folderList.AppendItem(parentItem, item[0])
+						self.AddTreeNodes(newItem, item[1])
+				else:
+					self.AddTreeNodes(parentItem, item)
 
 	def formFolderList(self, path=''):
 		"""
 		给定路径，以配置里图片文件后缀list为依据，过滤并形成对应特定文件及文件夹list，方便后面使用
 		"""
 		#lis=os.listdir(path)
-		tr=os.walk(path)
+		#tr=
 		data=[]
-		imtype=_ct.mainC.imTypes
 		def Lindex(l,i):
 			if i in l:
 				return l.index(i)
@@ -568,12 +593,12 @@ class MainWindow(wx.SplitterWindow):
 						if i==l[x][0]:
 							return x
 			return -1
-		for x in tr:
+		for x in os.walk(path):
 			if not x:
 				continue
 			ltemp=x[2][:]
 			for f in ltemp:
-				if f.split('.')[-1].lower() not in imtype:
+				if f.split('.')[-1].lower() not in _ct.mainC.imTypes:
 					x[2].remove(f)
 			x[1].extend(x[2])
 			x=[x[0],x[1]]
