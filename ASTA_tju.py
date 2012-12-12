@@ -3,12 +3,13 @@
 from __future__ import division		#this must be put at the beginning
 import wx,os,threading as TD#,time as T
 from os import sep as PS
-import cv2,numpy as _np
+import cv2
 #import wx.animate as _A
 from wx.lib.agw.multidirdialog import MultiDirDialog
 
 import commonUITools as _ct
 from workspace import WorkFrame
+import dataprocess as _dp
 
 #_ScrollBarWidth=18
 _WaitingHandler=None
@@ -104,18 +105,8 @@ class ImContainer(wx.Window):
 		else:
 			self.image=wx.Image(self.imPath)
 			im = self.image.Copy()
+		_dp.adjustImSize(im, (sz.x, sz.y))
 		x,y=im.GetSize()
-
-		if x/y > sz.x/sz.y:
-			if x>sz.x or y>sz.y:
-				y=_ct.Iround(y*sz.x/x)
-				im.Rescale(sz.x, y)
-				x=sz.x
-		else:
-			if x>sz.x or y>sz.y:
-				x=_ct.Iround(x*sz.y/y)
-				im.Rescale(x, sz.y)
-				y=sz.y
 		self.impos[0]=_ct.Iround(abs(sz.x-x)/2)+self._border
 		self.impos[1]=_ct.Iround(abs(sz.y-y)/2)+self._border
 
@@ -192,11 +183,12 @@ class ImContainer(wx.Window):
 		#e.Skip()
 
 	def OnIdle(self, e):
+		#print 'OnIdle'
 		if self.reInitBuffer and self.doSize:
-			#print 'OnIdle'
 			self.initBuffer()
 			self.Refresh(0)
-
+		if self._ui_status == _UI_HOVER:
+			self.OnLeave(e)
 		#if self.image.GetSize()
 
 	def OnEnter(self, e):
@@ -248,6 +240,7 @@ class ImContainer(wx.Window):
 			self.Refresh(0)
 
 	def OnDClick(self, e):
+		self.UnSel()
 		app=wx.GetApp()
 		info={'path':self.imPath, 'image':self.image}
 		if hasattr(app, 'workSpace') and app.workSpace:
@@ -417,11 +410,8 @@ class MyImWindow(wx.Panel):
 		for c in self.Sizer.GetChildren():
 			si=c.GetWindow().image
 			#print type(si.GetData())
-			x,y=si.GetSize()
-			arr=_np.ndarray((y,x,3), _np.uint8, si.GetDataBuffer())
-			if _np.size(arr,1)>1000 or _np.size(arr, 2)>650:
-				arr=cv2.resize(arr, (int(_np.size(arr,1)/5), int(_np.size(arr,0)/5)))
-			arr=cv2.cvtColor(arr, 6)
+			arr=_dp.cvtImObject(si)
+			arr=_dp.adjustImSize(arr, (1000,650))
 			cv2.imshow('test', arr)
 			break
 

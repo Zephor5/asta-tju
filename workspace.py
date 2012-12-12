@@ -1,8 +1,9 @@
 #coding=utf-8
-import wx,cv2,numpy as _np
+import wx,cv2
 #from os import sep as PS
 
 import commonUITools as _ct
+import dataprocess as _dp
 
 class WorkFrame(wx.Frame):
 	"""
@@ -14,7 +15,6 @@ class WorkFrame(wx.Frame):
 
 		self._image=info['image']
 		self._image_path=info['path']
-		#print _np.size(self._image,2)
 
 		self.initStatusBar()
 
@@ -33,6 +33,13 @@ class WorkFrame(wx.Frame):
 	def initBind(self):
 		pass
 		#self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+	def initBuffer(self):
+		sz=self.GetClientSize()
+		self.buffer = wx.EmptyBitmap(sz.x, sz.y)
+		dc=wx.BufferedDC(None, self.buffer)
+		dc.SetBackground(wx.Brush(self.GetBackgroundColour()))
+		dc.Clear()
 
 	def menuData(self): #2 菜单数据
 		return [(u"文件", (
@@ -63,6 +70,7 @@ class WorkFrame(wx.Frame):
 			if self.status_check():
 				self._image_path=info['path']
 				self._image=info['image']
+				self.initBuffer()
 			else:
 				pass
 
@@ -71,12 +79,15 @@ class WorkFrame(wx.Frame):
 		return True
 
 	def pre_processing(self, e=None):
-		x,y=self._image.GetSize()
-		img=_np.ndarray((y,x,3), _np.uint8, self._image.GetDataBuffer())
+		img=_dp.cvtImObject(self._image)
 		cv2.imshow('cv2_show', img)
 
 	def fuzzy_recognition(self, e=None):
-		pass
+		img=cv2.imread(self._image_path)
+		self._image=_dp.cvtImObject(img)
+		self.initBuffer()
+		#print type(img)
+		#cv2.imshow('cv2_show1', img)
 
 	def pic_coordinate_system_build(self, e=None):
 		pass

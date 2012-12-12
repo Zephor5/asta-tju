@@ -6,3 +6,6 @@
 
 #格式：名称【类型】：url
 近景摄影测量的一些总结和文献【zip】:http://pan.baidu.com/share/link?shareid=176866&uk=1359544044
+google搜索方法及opencv基础教程【pdf】:http://pan.baidu.com/share/link?shareid=134063&uk=873037780
+opencv软件【exe】:http://pan.baidu.com/share/link?shareid=134064&uk=873037780
+图像处理相关论文【pdf】:http://pan.baidu.com/share/link?shareid=134066&uk=873037780
